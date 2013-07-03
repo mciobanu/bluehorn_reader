@@ -1,0 +1,4 @@
+The code is distributed under the MIT License (see http://opensource.org/licenses/mit-license.php or the file MIT-License.txt.)
+
+I am providing code in this repository to you under an open source license. Because this is my personal repository, the license you receive to my code is from me and not from my employer (Facebook).
+

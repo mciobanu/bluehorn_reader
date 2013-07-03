@@ -1,0 +1,19 @@
+Set up:
+
+You need Java 7, Cassandra 1.2.4 (something close would probably also work) and Maven. The plan is to have the build produce a single jar but we're not there yet. For now I just run everything from IntelliJ Idea. Importing the .pom file should be enough.
+
+You'd have to make some adjustments, e.g. to configure log4j or to set up a keystore for HTTP access. (These will be better documented in the future.)
+
+
+There is a single executable, which can perform several roles, based on configuration (right now most of the configuration is actually hard-coded in a file, but that is going to change soon):
+- Web server
+- Feed Crawler
+- Feed Manager - assigns feeds to crawlers, so that each feed has its own crawler
+By default the same process will act in all 3 roles. Bigger deployments would probably need to use specialized hosts for each role. For all the roles, multiple hosts can be allocated; if there are potential conflicts, they will come to an agreement on their own. There is no state on the web server, so many web servers can be put behind a load balancer and they should just work.
+
+
+
+When the process starts, it makes available a web server at the port 8080 for HTTP and 8443 for HTTPS. There is a default account named "admin" with the password "admin", which can be changed. (Note that the password is transmitted in clear over HTTP, so better use HTTPS.) Other accounts can be created. Feeds can be added and browsed, and that's about it.
+
+Although Cassandra needs to be running on the local host (or on other hosts, but then the config should reflect that), the program creates the database schema at startup, so that's not something you should worry about. The schema will change, though. There are no concrete plans to make the program upgrade the schema automatically as the version increases, but I'll do it in the future.
+
