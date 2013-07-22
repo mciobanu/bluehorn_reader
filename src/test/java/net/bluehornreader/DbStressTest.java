@@ -144,7 +144,7 @@ class DbStressTest {
                     try {
                         String feed = "feed" + threadNumber;
                         LOG.debug("starting " + Article.CQL_TABLE.tableName + " - " + feed);
-                        ArrayList<Article> objects = new ArrayList<Article>();
+                        ArrayList<Article> objects = new ArrayList<>();
                         for (int i = 0; i < rowCnt; ++i) {
                             objects.add(new Article(feed, i, "title " + i, "summary " + i,
                                     "http://site" + i, "content " + i + " " + threadNumber + BIG_CONTENT, System.currentTimeMillis()));
@@ -169,7 +169,7 @@ class DbStressTest {
                     try {
                         String feed = "feed" + threadNumber;
                         LOG.debug("starting " + Article.CQL_TABLE.tableName + " - " + feed);
-                        ArrayList<Article> objects = new ArrayList<Article>();
+                        ArrayList<Article> objects = new ArrayList<>();
                         for (int i = 0; i < rowCnt; ++i) {
                             objects.add(new Article(feed, i, "title " + i, "summary " + i,
                                     "http://site" + i, "content " + i + " " + threadNumber + BIG_CONTENT, System.currentTimeMillis()));
@@ -225,7 +225,7 @@ class DbStressTest {
                     try {
                         String feed = "feed" + threadNumber;
                         LOG.debug("starting " + Article.CQL_TABLE.tableName + " - " + feed);
-                        ArrayList<Article> objects = new ArrayList<Article>();
+                        ArrayList<Article> objects = new ArrayList<>();
                         for (int i = 1; i < rowCnt; ++i) {  // !!! i starts from "1" to leave some records there
                             objects.add(new Article(feed, i, null, null, null, null, 0));
                         }
@@ -249,7 +249,7 @@ class DbStressTest {
                     try {
                         String feed = "feed" + threadNumber;
                         LOG.debug("starting " + Article.CQL_TABLE.tableName + " - " + feed);
-                        ArrayList<Article> objects = new ArrayList<Article>();
+                        ArrayList<Article> objects = new ArrayList<>();
                         for (int i = 1; i < rowCnt; ++i) {
                             objects.add(new Article(feed, i, null, null, null, null, 0));
                             Article.DB db = new Article.DB(lowLevelDbAccess);
@@ -275,7 +275,7 @@ class DbStressTest {
                 public void run() {
                     try {
                         LOG.debug("starting " + Feed.CQL_TABLE.tableName);
-                        ArrayList<Feed> objects = new ArrayList<Feed>();
+                        ArrayList<Feed> objects = new ArrayList<>();
                         for (int i = 0; i < rowCnt; ++i) {
                             String id = "feed" + (threadNumber * rowCnt + i);
                             objects.add(new Feed(id, "http://" + id));
@@ -326,7 +326,7 @@ class DbStressTest {
                 public void run() {
                     try {
                         LOG.debug("starting " + Feed.CQL_TABLE.tableName);
-                        ArrayList<Feed> objects = new ArrayList<Feed>();
+                        ArrayList<Feed> objects = new ArrayList<>();
                         for (int i = 1; i < rowCnt; ++i) {
                             String id = "feed" + (threadNumber * rowCnt + i);
                             objects.add(new Feed(id, null));
@@ -350,7 +350,7 @@ class DbStressTest {
                 public void run() {
                     try {
                         LOG.debug("starting " + Feed.CQL_TABLE.tableName);
-                        ArrayList<Feed> objects = new ArrayList<Feed>();
+                        ArrayList<Feed> objects = new ArrayList<>();
                         Feed.DB db = new Feed.DB(lowLevelDbAccess);
                         for (int i = 1; i < rowCnt; ++i) {
                             String id = "feed" + (threadNumber * rowCnt + i);
@@ -377,7 +377,7 @@ class DbStressTest {
                 public void run() {
                     try {
                         LOG.debug("starting " + User.CQL_TABLE.tableName);
-                        ArrayList<User> objects = new ArrayList<User>();
+                        ArrayList<User> objects = new ArrayList<>();
                         for (int i = 0; i < rowCnt; ++i) {
                             String id = "user" + (threadNumber * rowCnt + i);
                             byte[] passwd = new byte[15];
@@ -438,7 +438,7 @@ class DbStressTest {
                 public void run() {
                     try {
                         LOG.debug("starting " + User.CQL_TABLE.tableName);
-                        ArrayList<User> objects = new ArrayList<User>();
+                        ArrayList<User> objects = new ArrayList<>();
                         for (int i = 1; i < rowCnt; ++i) {
                             String id = "user" + (threadNumber * rowCnt + i);
                             objects.add(new User(id, null, null, null, null, null, true, false));
@@ -467,7 +467,7 @@ class DbStressTest {
                     try {
                         LOG.debug("starting " + ReadArticlesColl.CQL_TABLE.tableName);
                         String userId = "user" + threadNumber;
-                        ArrayList<ReadArticlesColl> objects = new ArrayList<ReadArticlesColl>();
+                        ArrayList<ReadArticlesColl> objects = new ArrayList<>();
                         Random rnd = new Random(threadNumber);
                         for (int i = 0; i < rowCnt; ++i) {
                             ReadArticlesColl obj = new ReadArticlesColl(userId, "feed" + i);
@@ -528,7 +528,7 @@ class DbStressTest {
                     try {
                         LOG.debug("starting " + ReadArticlesColl.CQL_TABLE.tableName);
                         String userId = "user" + threadNumber;
-                        ArrayList<ReadArticlesColl> objects = new ArrayList<ReadArticlesColl>();
+                        ArrayList<ReadArticlesColl> objects = new ArrayList<>();
                         for (int i = 1; i < rowCnt; ++i) {
                             ReadArticlesColl obj = new ReadArticlesColl(userId, "feed" + i);
                             objects.add(obj);

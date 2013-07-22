@@ -13,9 +13,9 @@ This is an early version, so a lot remains to be done. However, as it is, the pr
 
 Currently there is only a generic web client, but I plan to write a native Android client (not in the immediate future, though.)
 
-The user interface is basically a sketch. You can use it to browse feeds but it's not pleasant and it lacks important features.
+The user interface is basically a sketch. You can use it to browse feeds but it's quite basic and it lacks features. It got to the point where it's good enough for me.
 
-This is my first contact with many of the technologies used here, so chances are there's plenty of room for improvement
+This is my first contact with many of the technologies used here, so chances are there's plenty of room for improvement.
 
 
 Requirements
@@ -29,6 +29,6 @@ Requirements
 What's next
 -----------
 
-To some extent it depends on whether there is interest in using and maybe contributing to the project. The next things to do are to move all the configuration to a file, to fix a little the UI, and to add more comments in the code. Then
+To some extent it depends on whether there is interest in using and maybe contributing to the project. The next things to do are to make running the thing easier, to fix a little the UI, and to add more comments in the code.
 
 

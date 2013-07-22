@@ -1,15 +1,17 @@
 <%@ page import="java.util.*" %>
+<%@ page import="org.apache.commons.lang.*" %>
 <%@ page import="net.bluehornreader.web.*" %>
 <%@ page import="net.bluehornreader.model.*" %>
 
-<% User user = (User)request.getAttribute(ReaderHandler.VAR_USER); %>
 
+<% User user = (User)request.getAttribute(ReaderHandler.VAR_USER); %>
+<% LoginInfo loginInfo = (LoginInfo)request.getAttribute(ReaderHandler.VAR_LOGIN_INFO); %>
 
 <html>
 
 <head>
 <title>Bluehorn Reader</title>
-<%@include file="style.jsp" %>
+<%=ReaderHandler.getStyle(loginInfo)%>
 </head>
 
 
@@ -39,7 +41,7 @@
 Feed.DB feedDb = (Feed.DB)request.getAttribute(ReaderHandler.VAR_FEED_DB);
 List<Feed> feeds = feedDb.get(user.feedIds);
 for (Feed feed : feeds) {
-    out.println("<a href=\"" + ReaderHandler.PATH_FEED + "/" + feed.feedId + "\">" + feed.name + "</a><br/>");
+    out.println("<a href=\"" + ReaderHandler.PATH_FEED + "/" + feed.feedId + "\">" + StringEscapeUtils.escapeHtml(feed.name) + "</a><br/>");
 }
 %>
 </p>

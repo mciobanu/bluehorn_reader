@@ -1,6 +1,7 @@
 package net.bluehornreader.service;
 
 import net.bluehornreader.model.*;
+import org.apache.commons.logging.*;
 import org.apache.http.*;
 import org.apache.http.client.*;
 import org.apache.http.client.methods.*;
@@ -21,12 +22,23 @@ import java.util.*;
  */
 public class RssParser {
 
+    private static final Log LOG = LogFactory.getLog(RssParser.class);
+
     private SimpleDateFormat fmt = new SimpleDateFormat("EEE, d MMM yyyy HH:mm:ss zzz", Locale.US);
 
-    public ArrayList<Article> parseRdf(String addr, String feedId, long earliestToInclude) throws Exception {
-        //ttt0 review earliestToInclude; quite likely its usage adds duplicates or misses entries
-        // ttt0 see if how to deal with new articles that have an older publish time
-        ArrayList<Article> res = new ArrayList<>();
+    public static class Results {
+        public ArrayList<Article> articles = new ArrayList<>();
+        public String feedName = "";
+    }
+
+    public Results parseRdf(String addr, String feedId, long earliestToInclude) throws Exception {
+        //ttt1 review earliestToInclude; quite likely its usage adds duplicates or misses entries; probably don't add 1 to avoid losses and have
+        //      FeedCrawlerService check before saving if an article already exists
+        // ttt2 see if how to deal with new articles that have an older publish time; currently they are discarded
+
+        LOG.info(String.format("Parsing feed %s from %s (%s)", feedId, earliestToInclude, fmt.format(new Date(earliestToInclude))));
+        Results results = new Results();
+
         HttpClient httpClient = new DefaultHttpClient();
         HttpGet httpGet = new HttpGet(addr);
         HttpResponse httpResponse = httpClient.execute(httpGet);
@@ -39,40 +51,67 @@ public class RssParser {
             Element rootNode = document.getRootElement();
             List<Element> channels = rootNode.getChildren("channel");
             for (Element channel : channels) {
+                if (results.feedName.isEmpty()) {
+                    Element feedTitle = channel.getChild("title");
+                    if (feedTitle != null) {
+                        results.feedName = feedTitle.getText();
+                        LOG.info(String.format("Found name %s for feed %s", results.feedName, feedId));
+                        //results.feedName = "";
+                    }
+                }
                 List<Element> items = channel.getChildren("item");
                 for (Element item : items) {
                     Element title = item.getChild("title");
                     Element link = item.getChild("link");
                     Element pubDate = item.getChild("pubDate");
 
-                    long publishTime = fmt.parse(pubDate.getText()).getTime();
-                    if (publishTime >= earliestToInclude) {
-                        Article article = new Article(feedId, 0, title.getText(), "", link.getText(), "", publishTime);
-                        res.add(article);
+                    if (pubDate == null) {
+                        // ttt2 apparently pubDate is optional; not sure what to do in such a case
+                        LOG.error("Missing pubDate when parsing feed " + feedId);
+                    } else {
+                        long publishTime = fmt.parse(pubDate.getText()).getTime();
+                        if (publishTime >= earliestToInclude) {
+                            Article article = new Article(feedId, 0, cleanTitle(title.getText()), "", link.getText(), "", publishTime);
+                            results.articles.add(article);
+                        }
                     }
                 }
             }
             in.close();
         }
 
-        Collections.sort(res, new Comparator<Article>() {
+        Collections.sort(results.articles, new Comparator<Article>() {
             @Override
             public int compare(Article o1, Article o2) {
-                return (int) (o1.publishTime - o2.publishTime);
+                long a = o1.publishTime - o2.publishTime;
+                return a > 0 ? 1 : a < 0 ? -1 : 0;
             }
         });
-        return res;
+        LOG.info(String.format("Done parsing feed %s from %s (%s)", feedId, earliestToInclude, fmt.format(new Date(earliestToInclude))));
+        return results;
     }
+
+    //ttt1 see how better to deal with these
+    static String[] TO_REMOVE = new String[] { "</?[a-zA-Z]+>", "<[a-zA-Z]+/>" };
+    public static String cleanTitle(String s) {
+        for (String del : TO_REMOVE) {
+            s = s.replaceAll(del, "");
+        }
+        return s;
+    }
+
 
 
     public static void main(String[] args) throws Exception {
         //parseRdf("http://rss.cnn.com/rss/edition_europe.rss");
         RssParser rssParser = new RssParser();
         //for (Article article : rssParser.parseRdf("http://rss.com.com/2547-12-0-20.xml", "feed1", 1372610355000L)) {
-        for (Article article : rssParser.parseRdf("http://rss.cnn.com/rss/edition_europe.rss", "feed1", 1372503394000L)) {
+        //Results results = rssParser.parseRdf("http://rss.cnn.com/rss/edition_europe.rss", "feed1", 1372503394000L);
+        Results results = rssParser.parseRdf("http://newsrss.bbc.co.uk/rss/newsonline_world_edition/europe/rss.xml", "feed1", 0);
+        for (Article article : results.articles) {
             System.out.println(article.toString());
         }
     }
 }
 
-//ttt0 switch to Java 7 syntax
+

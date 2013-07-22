@@ -1,7 +1,7 @@
 package net.bluehornreader.service;
 
-import net.bluehornreader.*;
 import net.bluehornreader.data.*;
+import net.bluehornreader.misc.*;
 import org.apache.commons.logging.*;
 
 import java.util.*;
@@ -19,7 +19,7 @@ public class ServiceManager {
 
     private static final Log LOG = LogFactory.getLog(ServiceManager.class);
 
-    private ArrayList<Service> services = new ArrayList<Service>();
+    private ArrayList<Service> services = new ArrayList<>();
     private LowLevelDbAccess lowLevelDbAccess;
 
     public ServiceManager(String webDir) {
@@ -90,7 +90,7 @@ public class ServiceManager {
     public static void main(String[] args) throws InterruptedException {
 
         if (args.length != 2) {
-            System.err.println("Usage: ServiceManager <config_file> <jsp_dir>"); //ttt0 see about compiling the JSPs
+            System.err.println("Usage: ServiceManager <config_file> <jsp_dir>");
             System.exit(1);
         }
 

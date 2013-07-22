@@ -12,7 +12,7 @@
 
 #headerP {
     clear:both;
-    background: #000020;
+    background: #000040;
     margin:0;
     padding:6px 15px !important;
     text-align:right;
@@ -29,10 +29,10 @@ body {
     padding: 0px;
 }
 
-a:link     { color: #ffffc0; text-decoration: underline; }
-a:active   { color: #ffffb0; text-decoration: underline; }
-a:visited  { color: #dddd80; text-decoration: underline; }
-a:hover    { color: #ffffd0; text-decoration: underline; }
+a:link     { color: #ffffc0; text-decoration: none; }
+a:visited  { color: #dddd80; text-decoration: none; }
+a:hover    { color: #ffffd0; text-decoration: none; }
+a:active   { color: #ffffb0; text-decoration: none; }
 
 
 #column1 {

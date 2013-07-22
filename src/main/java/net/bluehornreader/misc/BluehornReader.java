@@ -1,4 +1,4 @@
-package net.bluehornreader;
+package net.bluehornreader.misc;
 
 import net.bluehornreader.data.*;
 import net.bluehornreader.model.*;
@@ -40,7 +40,7 @@ public class BluehornReader {
 
         ReadArticlesColl rd = new ReadArticlesColl("usr1", "feed1");
         rd.markRead(10, 20);
-        ArrayList<ReadArticlesColl> ra = new ArrayList<ReadArticlesColl>();
+        ArrayList<ReadArticlesColl> ra = new ArrayList<>();
         ra.add(rd);
         db.add(ra);
 

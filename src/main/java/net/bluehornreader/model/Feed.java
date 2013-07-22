@@ -28,7 +28,7 @@ public class Feed {
     // columns
     public String name;
     public String url;
-    public int maxSeq; // article count in the feed - 1 (or the seq of the latest article); needed to easily get the last articles
+    public int maxSeq; // article count in the feed - 1 (or the seq of the latest article); needed to easily get the last articles; -1 if there are no articles
 
     private static class Columns {
         private static final String FEED_ID = "feed_id";
@@ -42,7 +42,7 @@ public class Feed {
 
     public static CqlTable CQL_TABLE;
     static {
-        List<ColumnInfo> columnInfos = new ArrayList<ColumnInfo>();
+        List<ColumnInfo> columnInfos = new ArrayList<>();
         columnInfos.add(new ColumnInfo(Columns.FEED_ID, TEXT));
         columnInfos.add(new ColumnInfo(Columns.NAME, TEXT));
         columnInfos.add(new ColumnInfo(Columns.URL, TEXT));
@@ -100,7 +100,8 @@ public class Feed {
         private LowLevelDbAccess lowLevelDbAccess;
 
         private static final String ADD_STATEMENT = CQL_TABLE.getUpdateStatement();
-        private static final String UPDATE_STATEMENT = CQL_TABLE.getUpdateStatement(Columns.FEED_ID, Columns.MAX_SEQ);
+        private static final String UPDATE_MAX_SEQ_STATEMENT = CQL_TABLE.getUpdateStatement(Columns.FEED_ID, Columns.MAX_SEQ);
+        private static final String UPDATE_NAME_STATEMENT = CQL_TABLE.getUpdateStatement(Columns.FEED_ID, Columns.NAME);
 
         private static final String SELECT_STATEMENT = CQL_TABLE.getSelectStatement();
         private static final String SELECT_MULTIPLE_STATEMENT = CQL_TABLE.getSelectMultipleStatement();
@@ -109,6 +110,10 @@ public class Feed {
 
         public DB(LowLevelDbAccess lowLevelDbAccess) {
             this.lowLevelDbAccess = lowLevelDbAccess;
+        }
+
+        public void add(Feed feed) throws Exception {
+            add(Arrays.asList(feed));
         }
 
         public void add(Collection<Feed> feeds) throws Exception {
@@ -127,14 +132,26 @@ public class Feed {
             }
         }
 
-        public void update(String feedId, int maxSeq) throws Exception {
+        public void updateMaxSeq(String feedId, int maxSeq) throws Exception {
             OperationResult<CqlResult<Integer, String>> result;
             result = lowLevelDbAccess.getMainKeyspace()
                     .prepareQuery(LowLevelDbAccess.RESULTS_CF)
-                    .withCql(UPDATE_STATEMENT)
+                    .withCql(UPDATE_MAX_SEQ_STATEMENT)
                     .asPreparedStatement()
                     .withStringValue(feedId)
                     .withIntegerValue(maxSeq)
+                    .execute();
+            CqlTable.checkResult(result);
+        }
+
+        public void updateName(String feedId, String name) throws Exception {
+            OperationResult<CqlResult<Integer, String>> result;
+            result = lowLevelDbAccess.getMainKeyspace()
+                    .prepareQuery(LowLevelDbAccess.RESULTS_CF)
+                    .withCql(UPDATE_NAME_STATEMENT)
+                    .asPreparedStatement()
+                    .withStringValue(feedId)
+                    .withStringValue(name)
                     .execute();
             CqlTable.checkResult(result);
         }
@@ -249,7 +266,7 @@ public class Feed {
                     .execute();
             Rows<Integer, String> rows = result.getResult().getRows();
 
-            ArrayList<Feed> res = new ArrayList<Feed>();
+            ArrayList<Feed> res = new ArrayList<>();
 
             for (int i = 0; i < rows.size(); ++i) {
                 ColumnList<String> columns = rows.getRowByIndex(i).getColumns();

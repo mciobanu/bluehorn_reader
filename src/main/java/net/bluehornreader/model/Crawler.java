@@ -2,8 +2,8 @@ package net.bluehornreader.model;
 
 import com.netflix.astyanax.connectionpool.*;
 import com.netflix.astyanax.model.*;
-import net.bluehornreader.*;
 import net.bluehornreader.data.*;
+import net.bluehornreader.misc.*;
 
 import java.util.*;
 
@@ -36,7 +36,7 @@ public class Crawler {
 
     public static CqlTable CQL_TABLE;
     static {
-        List<ColumnInfo> columnInfos = new ArrayList<ColumnInfo>();
+        List<ColumnInfo> columnInfos = new ArrayList<>();
         columnInfos.add(new ColumnInfo(Columns.CRAWLER_ID, TEXT));
         columnInfos.add(new ColumnInfo(Columns.FEED_IDS, TEXT));
         columnInfos.add(new ColumnInfo(Columns.FEED_IDS_SEQ, INT));
@@ -46,7 +46,7 @@ public class Crawler {
 
     public Crawler(String crawlerId, Collection<String> feedIds, int feedIdsSeq, int crawlTick) {
         this.crawlerId = crawlerId;
-        this.feedIds = new HashSet<String>(feedIds);
+        this.feedIds = new HashSet<>(feedIds);
         this.feedIdsSeq = feedIdsSeq;
         this.crawlTick = crawlTick;
     }
@@ -64,12 +64,11 @@ public class Crawler {
     public static class DB {
 
         private LowLevelDbAccess lowLevelDbAccess;
-        private static String ID_SEP = ",";
 
         private static final String UPDATE_FEEDS_STATEMENT = CQL_TABLE.getUpdateStatement(Columns.CRAWLER_ID, Columns.FEED_IDS, Columns.FEED_IDS_SEQ);
         private static final String UPDATE_CRAWL_STATEMENT = CQL_TABLE.getUpdateStatement(Columns.CRAWLER_ID, Columns.CRAWL_TICK);
         private static final String SELECT_FULL_STATEMENT = CQL_TABLE.getSelectStatement();
-        private static final String SELECT_FEED_IDS_SEQ_STATEMENT = CQL_TABLE.getSelectStatement(Columns.FEED_IDS_SEQ);
+        private static final String SELECT_FEED_IDS_SEQ_STATEMENT = CQL_TABLE.getSelectSpecificColumnsStatement(Columns.FEED_IDS_SEQ);
         private static final String SELECT_ALL_STATEMENT = CQL_TABLE.getSelectAllStatement();
         private static final String DELETE_STATEMENT = CQL_TABLE.getDeleteStatement();
 
@@ -90,17 +89,13 @@ public class Crawler {
         }
 
         public void updateFeedList(String crawlerId, Collection<String> feedIds, int feedIdsSeq) throws Exception {
-            StringBuilder bld = new StringBuilder();
-            for (String feedId : feedIds) {
-                bld.append(feedId).append(ID_SEP);
-            }
             OperationResult<CqlResult<Integer, String>> result;
             result = lowLevelDbAccess.getMainKeyspace()
                     .prepareQuery(LowLevelDbAccess.RESULTS_CF)
                     .withCql(UPDATE_FEEDS_STATEMENT)
                     .asPreparedStatement()
                     .withStringValue(crawlerId)
-                    .withStringValue(bld.toString())
+                    .withStringValue(Utils.listAsString(feedIds))
                     .withIntegerValue(feedIdsSeq)
                     .execute();
             CqlTable.checkResult(result);
@@ -120,7 +115,7 @@ public class Crawler {
                 ColumnList<String> columns = rows.getRowByIndex(0).getColumns();
                 return new Crawler(
                         crawlerId,
-                        getFeedIds(columns.getStringValue(Columns.FEED_IDS, "")),
+                        Utils.stringAsList(columns.getStringValue(Columns.FEED_IDS, "")),
                         columns.getIntegerValue(Columns.FEED_IDS_SEQ, 0),
                         columns.getIntegerValue(Columns.CRAWL_TICK, 0));
             }
@@ -142,12 +137,12 @@ public class Crawler {
                     .execute();
             Rows<Integer, String> rows = result.getResult().getRows();
 
-            ArrayList<Crawler> res = new ArrayList<Crawler>();
+            ArrayList<Crawler> res = new ArrayList<>();
             for (int i = 0; i < rows.size(); ++i) {
                 ColumnList<String> columns = rows.getRowByIndex(0).getColumns();
                 res.add(new Crawler(
                         columns.getStringValue(Columns.CRAWLER_ID, ""),
-                        getFeedIds(columns.getStringValue(Columns.FEED_IDS, "")),
+                        Utils.stringAsList(columns.getStringValue(Columns.FEED_IDS, "")),
                         columns.getIntegerValue(Columns.FEED_IDS_SEQ, 0),
                         columns.getIntegerValue(Columns.CRAWL_TICK, 0)));
             }
@@ -189,13 +184,6 @@ public class Crawler {
                         .execute();
                 CqlTable.checkResult(result);
             }
-        }
-
-        private static Collection<String> getFeedIds(String s) {
-            if (s.equals("")) {
-                return new LinkedList<String>();
-            }
-            return Arrays.asList(s.split(ID_SEP, 0));
         }
     }
 }

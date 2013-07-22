@@ -1,6 +1,8 @@
-package net.bluehornreader;
+package net.bluehornreader.misc;
 
 import org.apache.commons.logging.*;
+
+import java.util.*;
 
 /**
  * Created with IntelliJ IDEA.
@@ -12,6 +14,8 @@ import org.apache.commons.logging.*;
 public class Utils {
 
     private static final Log LOG = LogFactory.getLog(Utils.class);
+
+    public static final String LIST_SEPARATOR = ":";
 
     public static void cbAssert(boolean cond, String message) {
         if (!cond) {
@@ -111,4 +115,34 @@ public class Utils {
         return res;
     }
 
+
+    public static String listAsString(Collection<String> list) {
+        StringBuilder bld = new StringBuilder();
+        boolean first = true;
+        for (String s : list) {
+            if (first) {
+                first = false;
+            } else {
+                bld.append(LIST_SEPARATOR);
+            }
+            bld.append(s);
+        }
+        return bld.toString();
+    }
+
+    /**
+     * @param s can be null or empty, in which case an empty list is returned
+     * @return
+     */
+    public static ArrayList<String> stringAsList(String s) {
+        return new ArrayList<>(Arrays.asList(stringAsArray(s)));
+    }
+
+    /**
+     * @param s can be null or empty, in which case an empty array is returned
+     * @return
+     */
+    public static String[] stringAsArray(String s) {
+        return s == null || s.isEmpty() ? new String[0] : s.split(LIST_SEPARATOR, 0);
+    }
 }

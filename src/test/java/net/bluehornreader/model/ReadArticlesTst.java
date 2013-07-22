@@ -18,7 +18,7 @@ public class ReadArticlesTst {
     int maxBitmapSize = 10;
 
     public static void main(String[] args) {
-        ArrayList<Long> times = new ArrayList<Long>();
+        ArrayList<Long> times = new ArrayList<>();
         times.add(System.currentTimeMillis());
 
         ReadArticlesTst tst = new ReadArticlesTst();

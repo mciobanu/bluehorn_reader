@@ -1,7 +1,7 @@
 package net.bluehornreader.service;
 
-import net.bluehornreader.*;
 import net.bluehornreader.data.*;
+import net.bluehornreader.misc.*;
 import net.bluehornreader.web.*;
 import org.apache.commons.logging.*;
 import org.eclipse.jetty.server.*;
@@ -33,7 +33,7 @@ public class WebServerService extends Service {
     see also: http://docs.oracle.com/cd/E17952_01/mysql-monitor-2.3-en/mem-program-reference-server-ssl.html
      */
 
-    public WebServerService(LowLevelDbAccess lowLevelDbAccess, String webDir) throws Exception {
+    public WebServerService(LowLevelDbAccess lowLevelDbAccess, String webDir) {
         this.lowLevelDbAccess = lowLevelDbAccess;
         this.webDir = webDir;
     }
@@ -59,20 +59,30 @@ public class WebServerService extends Service {
             http.setPort(httpPort);
             http.setIdleTimeout(Config.getConfig().httpIdleTimeout);
 
-            SslContextFactory sslContextFactory = new SslContextFactory();
-            sslContextFactory.setKeyStorePath(Config.getConfig().httpsKeystore);
-            sslContextFactory.setKeyStorePassword(Config.getConfig().httpsKeystorePassword);
+            Connector[] connectors;
 
-            HttpConfiguration httpsConfiguration = new HttpConfiguration(httpConfiguration);
-            httpsConfiguration.addCustomizer(new SecureRequestCustomizer());
+            String httpsKeystore = Config.getConfig().httpsKeystore;
+            String httpsKeystorePassword = Config.getConfig().httpsKeystorePassword;
+            if (httpsKeystore != null && httpsKeystorePassword != null) {
+                SslContextFactory sslContextFactory = new SslContextFactory();
+                sslContextFactory.setKeyStorePath(httpsKeystore);
+                sslContextFactory.setKeyStorePassword(httpsKeystorePassword);
 
-            ServerConnector https = new ServerConnector(jettyServer,
-                    new SslConnectionFactory(sslContextFactory, "http/1.1"),
-                    new HttpConnectionFactory(httpsConfiguration));
-            https.setPort(httpsPort);
-            https.setIdleTimeout(Config.getConfig().httpsIdleTimeout);
+                HttpConfiguration httpsConfiguration = new HttpConfiguration(httpConfiguration);
+                httpsConfiguration.addCustomizer(new SecureRequestCustomizer());
 
-            jettyServer.setConnectors(new Connector[]{http, https});
+                ServerConnector https = new ServerConnector(jettyServer,
+                        new SslConnectionFactory(sslContextFactory, "http/1.1"),
+                        new HttpConnectionFactory(httpsConfiguration));
+                https.setPort(httpsPort);
+                https.setIdleTimeout(Config.getConfig().httpsIdleTimeout);
+
+                connectors = new Connector[]{ http, https };
+            } else {
+                connectors = new Connector[]{ http };
+            }
+
+            jettyServer.setConnectors(connectors);
 
             setupReaderHandler(jettyServer, lowLevelDbAccess);
             //server.setStopAtShutdown(true);
@@ -101,7 +111,7 @@ public class WebServerService extends Service {
     }
 
 
-    private void setupReaderHandler(Server server, LowLevelDbAccess lowLevelDbAccess) throws Exception {
+    private void setupReaderHandler(Server server, LowLevelDbAccess lowLevelDbAccess) {
         ReaderHandler readerHandler = new ReaderHandler(lowLevelDbAccess, webDir);
         server.setHandler(readerHandler);
     }

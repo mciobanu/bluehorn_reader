@@ -2,12 +2,11 @@ package net.bluehornreader.model;
 
 import com.netflix.astyanax.connectionpool.*;
 import com.netflix.astyanax.model.*;
-import net.bluehornreader.*;
 import net.bluehornreader.data.*;
 
 import java.util.*;
 
-import static net.bluehornreader.data.CqlTable.ColumnInfo;
+import static net.bluehornreader.data.CqlTable.*;
 import static net.bluehornreader.data.CqlTable.ColumnType.*;
 
 /**
@@ -36,7 +35,7 @@ public class Election {
 
     public static CqlTable CQL_TABLE;
     static {
-        List<ColumnInfo> columnInfos = new ArrayList<ColumnInfo>();
+        List<ColumnInfo> columnInfos = new ArrayList<>();
         columnInfos.add(new ColumnInfo(Columns.ELECTION_ID, TEXT));
         columnInfos.add(new ColumnInfo(Columns.LEADER_ID, TEXT));
         columnInfos.add(new ColumnInfo(Columns.TICK, INT));
@@ -71,7 +70,6 @@ public class Election {
 
         public DB(LowLevelDbAccess lowLevelDbAccess) {
             this.lowLevelDbAccess = lowLevelDbAccess;
-            Config config = Config.getConfig();
             UPDATE_TICK_STATEMENT = CQL_TABLE.getUpdateStatement(Columns.ELECTION_ID, Columns.LEADER_ID, Columns.TICK);
             UPDATE_DATA_VERSION_STATEMENT = CQL_TABLE.getUpdateStatement(Columns.ELECTION_ID, Columns.DATA_VERSION);
             SELECT_STATEMENT = CQL_TABLE.getSelectStatement();

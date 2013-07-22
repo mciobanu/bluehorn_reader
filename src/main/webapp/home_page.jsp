@@ -2,13 +2,16 @@
 <%@ page import="net.bluehornreader.web.*" %>
 <%@ page import="net.bluehornreader.model.*" %>
 
+
+
 <% User user = (User)request.getAttribute(ReaderHandler.VAR_USER); %>
+<% LoginInfo loginInfo = (LoginInfo)request.getAttribute(ReaderHandler.VAR_LOGIN_INFO); %>
 
 <html>
 
 <head>
 <title>Bluehorn Reader</title>
-<%@include file="style.jsp" %>
+<%=ReaderHandler.getStyle(loginInfo)%>
 </head>
 
 
@@ -17,8 +20,6 @@
 <div id="header">
     <p id="headerP">
         <%=user.name%>
-        <a href="<%=ReaderHandler.PATH_FEED_ADMIN%>">Feed list administration</a>
-        <a href="<%=ReaderHandler.PATH_SETTINGS%>">Settings</a>
         <a href="<%=ReaderHandler.PATH_LOGOUT%>">Log out</a>
     </p>
 </div>
@@ -31,10 +32,15 @@
 <a href="<%=ReaderHandler.PATH_FEEDS%>">Feeds</a>
 
 <p/>
+<a href="<%=ReaderHandler.PATH_FEED_ADMIN%>">Feed list administration</a>
+
+<p/>
 <a href="<%=ReaderHandler.PATH_SETTINGS%>">Settings</a>
 
 <p/>
 <a href="<%=ReaderHandler.PATH_LOGOUT%>">Log out</a>
+
+
 
 </body>
 </html>

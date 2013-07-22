@@ -2,13 +2,13 @@ package net.bluehornreader.model;
 
 import com.netflix.astyanax.connectionpool.*;
 import com.netflix.astyanax.model.*;
-import net.bluehornreader.*;
 import net.bluehornreader.data.*;
+import net.bluehornreader.misc.*;
 import org.apache.commons.logging.*;
 
 import java.util.*;
 
-import static net.bluehornreader.Utils.*;
+import static net.bluehornreader.misc.Utils.*;
 import static net.bluehornreader.data.CqlTable.ColumnInfo;
 import static net.bluehornreader.data.CqlTable.ColumnType.*;
 
@@ -252,7 +252,7 @@ public class ReadArticlesColl {
 
     public static CqlTable CQL_TABLE;
     static {
-        List<ColumnInfo> columnInfos = new ArrayList<ColumnInfo>();
+        List<ColumnInfo> columnInfos = new ArrayList<>();
         columnInfos.add(new ColumnInfo(Columns.USER_ID_AND_FEED_ID, TEXT));
         columnInfos.add(new ColumnInfo(Columns.FIRST, INT));
         columnInfos.add(new ColumnInfo(Columns.BITMAP, BLOB));
@@ -286,6 +286,10 @@ public class ReadArticlesColl {
 
         public DB(LowLevelDbAccess lowLevelDbAccess) {
             this.lowLevelDbAccess = lowLevelDbAccess;
+        }
+
+        public void add(ReadArticlesColl readArticlesColl) throws Exception {
+            add(Arrays.asList(readArticlesColl));
         }
 
         public void add(Collection<ReadArticlesColl> readArticlesColls) throws Exception {
@@ -348,7 +352,7 @@ public class ReadArticlesColl {
     }
 
     private static String getKey(String userId, String feedId) {
-        return userId + ":" + feedId;
+        return userId + Utils.LIST_SEPARATOR + feedId;
     }
 
     private String getKey() {

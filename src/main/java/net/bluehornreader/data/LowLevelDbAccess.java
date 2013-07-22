@@ -9,7 +9,7 @@ import com.netflix.astyanax.impl.*;
 import com.netflix.astyanax.model.*;
 import com.netflix.astyanax.serializers.*;
 import com.netflix.astyanax.thrift.*;
-import net.bluehornreader.*;
+import net.bluehornreader.misc.*;
 import net.bluehornreader.model.*;
 import org.apache.commons.logging.*;
 
@@ -180,7 +180,29 @@ public class LowLevelDbAccess {
         } catch (BadRequestException e) {
             LOG.info("Table probably exists: " + e.getMessage());
         }
+        if (cqlTable.indexInfos != null) {
+            for (CqlTable.IndexInfo indexInfo : cqlTable.indexInfos) {
+                addIndex(keyspace, cqlTable, indexInfo.columnNames);
+            }
+        }
     }
+
+
+    private void addIndex(Keyspace keyspace, CqlTable cqlTable, String... columnNames) throws Exception {
+        OperationResult<CqlResult<Integer, String>> result;
+        String cql = cqlTable.getCreateIndexStatement(columnNames);
+        LOG.info("Executing " + cql);
+        try {
+            result = keyspace
+                    .prepareQuery(RESULTS_CF)
+                    .withCql(cql)
+                    .execute();
+            LOG.info("Latency (ms): " + result.getLatency(TimeUnit.MILLISECONDS));
+        } catch (BadRequestException e) {
+            LOG.info("Index probably exists: " + e.getMessage());
+        }
+    }
+
 
     private void addAdminUserIfMissing() throws Exception {
         User.DB db = new User.DB(this);
@@ -192,7 +214,7 @@ public class LowLevelDbAccess {
         String salt = "salt";
 
         admin = new User("admin", "admin", User.computeHashedPassword(password, salt), salt, "admin@admins", new ArrayList<String>(), true, true);
-        db.add(Arrays.asList(admin));
+        db.add(admin);
     }
 
 

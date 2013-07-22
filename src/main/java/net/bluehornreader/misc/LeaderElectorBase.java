@@ -1,4 +1,4 @@
-package net.bluehornreader;
+package net.bluehornreader.misc;
 
 import net.bluehornreader.model.*;
 import org.apache.commons.logging.*;

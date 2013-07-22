@@ -1,4 +1,4 @@
-package net.bluehornreader;
+package net.bluehornreader.misc;
 
 import javax.xml.bind.*;
 import java.util.*;
@@ -32,7 +32,7 @@ public class PrintUtils {
 
     private static final char[] HEX_DIGITS = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
 
-    public static String byteArrayAsString(byte[] bytes) {  //ttt1 look at DatatypeConverter.printHexBinary(byte[])
+    public static String byteArrayAsString(byte[] bytes) {  //ttt0 look at DatatypeConverter.printHexBinary(byte[])
         char[] bfr = new char[bytes.length * 2];
         int k;
         for (int i = 0; i < bytes.length; i++ ) {
@@ -43,6 +43,10 @@ public class PrintUtils {
         return new String(bfr);
     }
 
+    /**
+     * @param bytes
+     * @return representation based on Base64 with URL-friendly characters
+     */
     public static String byteArrayAsUrlString(byte[] bytes) {
         return DatatypeConverter.printBase64Binary(bytes).replace('/', '_').replace('+', '-').replace('=', '.');
     }

@@ -1,6 +1,6 @@
 package net.bluehornreader.service;
 
-import net.bluehornreader.*;
+import net.bluehornreader.misc.*;
 import org.apache.commons.logging.*;
 
 import java.net.*;
@@ -59,7 +59,8 @@ public abstract class Service extends Thread {
                 if (thread.isAlive()) {
                     foundAlive = true;
                     LOG.info(String.format("Thread %s is still alive", thread.getName()));
-                    synchronized (thread) { //ttt0 make sure this works, as Idea complains: create a separate test case
+                    synchronized (thread) { //ttt2 make sure this works, as Idea complains: create a separate test case; (the thing is that the object is not
+                        // local, but taken from a global collection)
                         thread.notify();
                     }
                 }

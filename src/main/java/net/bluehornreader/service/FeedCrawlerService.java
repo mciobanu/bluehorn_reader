@@ -1,10 +1,11 @@
 package net.bluehornreader.service;
 
-import net.bluehornreader.*;
 import net.bluehornreader.data.*;
+import net.bluehornreader.misc.*;
 import net.bluehornreader.model.*;
 import org.apache.commons.logging.*;
 
+import java.text.*;
 import java.util.*;
 
 /**
@@ -36,9 +37,9 @@ public class FeedCrawlerService extends Service {
 
     // feedMap holds all the feeds for this crawler, while availableFeeds hold the feeds that are not being updated; feeds get removed from availableFeeds
     //  for the time interval when they are crawled
-    private HashMap<String, FeedInfo> feedMap;  // access to this must be synchronized for search, iterate, add, remove, ...
+    private HashMap<String, FeedInfo> feedMap = new HashMap<>();  // access to this must be synchronized for search, iterate, add, remove, ...
     private FeedInfoComparator feedInfoComparator = new FeedInfoComparator();
-    private PriorityQueue<FeedInfo> availableFeeds = new PriorityQueue<FeedInfo>(10, feedInfoComparator);  // access to this must be synchronized for search, iterate, add, remove, ...
+    private PriorityQueue<FeedInfo> availableFeeds = new PriorityQueue<>(10, feedInfoComparator);  // access to this must be synchronized for search, iterate, add, remove, ...
 
     private Crawler crawler;
     private Crawler.DB crawlerDb;
@@ -46,16 +47,17 @@ public class FeedCrawlerService extends Service {
     private Article.DB articleDb;
     private Election.DB electionDb;
 
-    private ArrayDeque<Article> articlesToBeSaved = new ArrayDeque<Article>();
+    private ArrayDeque<Article> articlesToBeSaved = new ArrayDeque<>();
+    private HashMap<String, FeedNameInfo> feedNames = new HashMap<>();
 
     private boolean shouldExit = false;
-    private ArrayDeque<Election> lastElections = new ArrayDeque<Election>();
+    private ArrayDeque<Election> lastElections = new ArrayDeque<>();
 
     private long nextTick;
     //private int seq;
-    private ArrayList<Thread> crawlingRunnables = new ArrayList<Thread>();
+    private ArrayList<Thread> crawlingRunnables = new ArrayList<>();
 
-
+    private SimpleDateFormat logDateFmt = new SimpleDateFormat("EEE, d MMM yyyy HH:mm:ss zzz", Locale.US);
 
     FeedCrawlerService(LowLevelDbAccess lowLevelDbAccess) throws Exception {
         crawlerDb = new Crawler.DB(lowLevelDbAccess);
@@ -71,6 +73,8 @@ public class FeedCrawlerService extends Service {
         feedDb = new Feed.DB(lowLevelDbAccess);
         articleDb = new Article.DB(lowLevelDbAccess);
         electionDb = new Election.DB(lowLevelDbAccess);
+        //clearFeeds(); System.exit(1);
+
 
         for (int i = 0; i < Config.getConfig().threadsPerCrawler; ++i) {
             Thread t = new CrawlingThread();
@@ -78,6 +82,23 @@ public class FeedCrawlerService extends Service {
             t.setName(String.format("CrawlingThread/%s/%s", IP, i));
             crawlingRunnables.add(t);
             t.start();
+        }
+    }
+
+    private void clearFeeds() throws Exception {
+        ArrayList<Feed> feeds = feedDb.getAll();
+        for (Feed feed : feeds) {
+            feedDb.updateName(feed.feedId, "YYY");
+            feedDb.updateMaxSeq(feed.feedId, -1);
+        }
+    }
+
+    private static class FeedNameInfo {
+        public String feedName;
+        public boolean saved = false;
+
+        private FeedNameInfo(String feedName) {
+            this.feedName = feedName;
         }
     }
 
@@ -160,7 +181,9 @@ public class FeedCrawlerService extends Service {
      */
     private boolean saveArticleBatch() throws Exception {
 
-        ArrayList<Article> articles = new ArrayList<Article>();
+        //ttt0 detect updates and don't save the same article many times
+        //ttt1 this might take too long
+        ArrayList<Article> articles = new ArrayList<>();
         String feedId;
         synchronized (this) {
             if (articlesToBeSaved.isEmpty()) {
@@ -179,6 +202,14 @@ public class FeedCrawlerService extends Service {
                     break;
                 }
             }
+
+            for (Map.Entry<String, FeedNameInfo> entry : feedNames.entrySet()) {
+                FeedNameInfo feedNameInfo = entry.getValue();
+                if (!feedNameInfo.saved) {
+                    feedDb.updateName(entry.getKey(), feedNameInfo.feedName);
+                    feedNameInfo.saved = true;
+                }
+            }
         }
 
         if (articles.isEmpty()) {
@@ -188,14 +219,15 @@ public class FeedCrawlerService extends Service {
         FeedInfo feedInfo = feedMap.get(feedId);
         if (feedInfo != null) {
             articleDb.add(articles);
-            feedDb.update(feedId, articles.get(articles.size() - 1).seq);
-            LOG.info(String.format("saved %d articles for feed %s", articles.size(), feedId));
+            feedDb.updateMaxSeq(feedId, articles.get(articles.size() - 1).seq);
+            LOG.info(String.format("saved %d articles for feed %s", articles.size(), feedInfo.toString()));
         } else {
             LOG.warn(String.format("Not saving articles for feed %s, which is no longer handled by this crawler", feedId));
         }
 
         return true;
     }
+
 
     synchronized private void tick() throws Exception {
         nextTick = System.currentTimeMillis() + Config.getConfig().getCrawlerTickInterval();
@@ -212,7 +244,7 @@ public class FeedCrawlerService extends Service {
     private static class FeedInfo {
         Feed feed;
         int sinceTick; // the tick of this crawler when this feed was added
-        int startedUpdateAtTick;
+        int startedUpdateAtTick = Integer.MIN_VALUE / 4; // so new feeds will get crawled immediately
         int finishedUpdateAtTick;
 
         private FeedInfo(Feed feed, int sinceTick) {
@@ -267,15 +299,27 @@ public class FeedCrawlerService extends Service {
     synchronized private String getNextFeed() {
         LOG.debug("availableFeeds " + PrintUtils.asString(availableFeeds));
         if (!isFeedManagerAlive()) {
+            LOG.warn("FeedManager not alive");
             return null;
         }
         if (availableFeeds.isEmpty()) {
+            LOG.warn("No available feeds");
             return null;
         }
-        if (availableFeeds.peek().startedUpdateAtTick + Config.getConfig().getTicksBetweenCrawls() > crawler.crawlTick) {
+        FeedInfo oldestCrawled = availableFeeds.peek();
+        int feedCrawlTick = oldestCrawled.startedUpdateAtTick + Config.getConfig().getTicksBetweenCrawls(); //ttt2 maybe have a nextUpdate field and
+                // manipulate it to distributes the crawlings more uniformly rather than bursts every hour or so
+        if (feedCrawlTick > crawler.crawlTick) {
+            LOG.warn(String.format("Not enough time passed since last crawl for oldest feed, %s. Next crawl will be after %s ticks (around: %s.) Feeds: %s",
+                    oldestCrawled,
+                    feedCrawlTick - crawler.crawlTick,
+                    logDateFmt.format(new Date(System.currentTimeMillis() + (feedCrawlTick - crawler.crawlTick) * Config.getConfig().getCrawlerTickInterval())),
+                    availableFeeds));
             return null; // not enough time passed since last crawl
         }
-        return availableFeeds.poll().feed.feedId;
+        FeedInfo feedInfo = availableFeeds.poll();
+        LOG.info(String.format("Returning feed %s. Remaining feeds: %s", feedInfo, availableFeeds));
+        return feedInfo.feed.feedId;
     }
 
 
@@ -313,25 +357,46 @@ public class FeedCrawlerService extends Service {
             return;
         }
 
-        HashMap<String, FeedInfo> newFeedMap = new HashMap<String, FeedInfo>();
-        PriorityQueue<FeedInfo> newAvailableFeedList = new PriorityQueue<FeedInfo>(1, feedInfoComparator);
+        LOG.info("Feed list changed");
+        HashMap<String, FeedInfo> newFeedMap = new HashMap<>();
+
         Crawler newCrawler = crawlerDb.getCrawler(crawler.crawlerId);
 
-        for (String feedId : newCrawler.feedIds) {
-            Feed feed = feedDb.get(feedId);
-            if (feed == null) {
-                LOG.warn(String.format("FeedCrawlerService %s was asked to crawl feed %s but couldn't find such a feed", IP, feedId));
-            } else {
-                FeedInfo feedInfo = new FeedInfo(feed, getSeq());
-                newAvailableFeedList.add(feedInfo);
-                newFeedMap.put(feedId, feedInfo);
-            }
-        }
-
         synchronized (this) {
-            crawler.feedIdsSeq = feedIdsSeq;
+
+            // Some feeds might be being crawled at this time; we don't want to end up with 2 entries for them in availableFeeds, so we don't add them
+            HashSet<String> crawlingFeedIds = new HashSet<>(feedMap.keySet());
+            {
+                HashSet<String> availableFeedIds = new HashSet<>();
+                for (FeedInfo feedInfo : availableFeeds) {
+                    availableFeedIds.add(feedInfo.feed.feedId);
+                }
+                crawlingFeedIds.removeAll(availableFeedIds);
+            }
+
+            availableFeeds = new PriorityQueue<>(newFeedMap.size() + 1, feedInfoComparator);
+            for (String feedId : newCrawler.feedIds) {
+                Feed feed = feedDb.get(feedId);
+                if (feed == null) {
+                    LOG.warn(String.format("FeedCrawlerService %s was asked to crawl feed %s but couldn't find such a feed", IP, feedId));
+                } else {
+                    FeedInfo feedInfo = feedMap.get(feedId);
+                    if (feedInfo == null) {
+                        feedInfo = new FeedInfo(feed, getSeq());
+                        LOG.info("New feed to crawl: " + feedInfo);
+                    }
+                    newFeedMap.put(feedId, feedInfo);
+                    if (crawlingFeedIds.contains(feedId)) {
+                        LOG.info(String.format("Feed %s is being currently crawled, so it's not going to be added to the list with available feeds", feedInfo));
+                    } else {
+                        availableFeeds.add(feedInfo);
+                    }
+                }
+            }
+
             feedMap = newFeedMap;
-            availableFeeds = newAvailableFeedList;
+            crawler.feedIdsSeq = feedIdsSeq;
+            LOG.info("Feeds to crawl: " + feedMap);
         }
     }
 
@@ -399,25 +464,40 @@ public class FeedCrawlerService extends Service {
         }
 
         private void crawlFeed(String feedId) throws Exception {
-            LOG.debug("crawling " + feedId);
 
             Feed feed = feedDb.get(feedId);
             if (feed == null) {
+                LOG.error("Feed " + feedId + " not found");
                 return;
             }
+            LOG.info("crawling feed " + feed);
+
             long earliestToInclude = 0;
             if (feed.maxSeq >= 0) {
                 Article article = articleDb.get(feedId, feed.maxSeq);
-                earliestToInclude = article.publishTime + 1;
+                LOG.info("Article with max seq: " + article);
+                if (article != null) {
+                    earliestToInclude = article.publishTime + 1;
+                }
             }
-            ArrayList<Article> articles = rssParser.parseRdf(feed.url, feedId, earliestToInclude);
-            for (Article article : articles) {
+            RssParser.Results parseResults = rssParser.parseRdf(feed.url, feedId, earliestToInclude);
+            for (Article article : parseResults.articles) {
                 article.seq = ++feed.maxSeq;
             }
 
             synchronized (FeedCrawlerService.this) {
-                articlesToBeSaved.addAll(articles);
+                articlesToBeSaved.addAll(parseResults.articles);
+                FeedNameInfo feedNameInfo = feedNames.get(feedId);
+                if (!parseResults.articles.isEmpty()) {
+                    LOG.info(String.format("Enqueued articles %s for feed %s (%s)", parseResults.articles, feedId, parseResults.feedName));
+                }
+                if (feedNameInfo == null || !feedNameInfo.feedName.equals(parseResults.feedName)) {
+                    LOG.info(String.format("Enqueued for saving feed name: %s for id %s", parseResults.feedName, feedId));
+                    feedNames.put(feedId, new FeedNameInfo(parseResults.feedName));
+                }
             }
+
+            LOG.info("done crawling feed " + feed);
         }
     }
 }

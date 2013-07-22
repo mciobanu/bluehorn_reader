@@ -1,12 +1,11 @@
 package net.bluehornreader.web;
 
-import net.bluehornreader.*;
+import net.bluehornreader.misc.*;
 import org.apache.commons.logging.*;
 import org.eclipse.jetty.server.*;
 
 import javax.servlet.http.*;
 import java.io.*;
-import java.security.*;
 
 /**
  * Created with IntelliJ IDEA.
@@ -35,7 +34,7 @@ public class WebUtils {
         out.println("<title>Bluehorn Reader Error</title>");
         out.println("</head>");
 
-        out.println("<body>"); //ttt0 add formatting
+        out.println("<body>"); //ttt1 add formatting
         out.println("<h2>Error: " + error + "</h2>");
         out.println("<p/>");
         out.println("<a href=\"" + ReaderHandler.PATH_LOGIN + "\">Log in</a>");
@@ -55,7 +54,7 @@ public class WebUtils {
         out.println("<title>Bluehorn Reader</title>");
         out.println("</head>");
 
-        out.println("<body>"); //ttt0 add formatting
+        out.println("<body>"); //ttt1 add formatting
         out.println("<h2>" + result + "</h2>");
         out.println("<p/>");
         out.println("<a href=\"" + nextPath + "\">Continue</a>");
@@ -79,18 +78,20 @@ public class WebUtils {
         return bld.toString().trim();
     }
 
-    public static String addCookie(HttpServletResponse httpServletResponse, boolean secured) {
-        SecureRandom secureRandom = new SecureRandom();
-        String loginId = "" + secureRandom.nextLong();
-        Cookie cookie = new Cookie(ReaderHandler.LOGIN_ID, loginId);
+    public static void saveCookies(HttpServletResponse httpServletResponse, boolean secured, String browserId, String sessionId) {
+        saveCookie(httpServletResponse, secured, ReaderHandler.BROWSER_ID, browserId, (int) (Config.getConfig().cookieExpireInterval / 1000));
+        saveCookie(httpServletResponse, secured, ReaderHandler.SESSION_ID, sessionId, (int) (Config.getConfig().cookieExpireInterval / 1000));
+    }
+
+    private static void saveCookie(HttpServletResponse httpServletResponse, boolean secured, String name, String value, int expires) {
+        Cookie cookie = new Cookie(name, value);
         cookie.setHttpOnly(true);
-        cookie.setMaxAge((int) (Config.getConfig().cookieExpireInterval / 1000));
+        cookie.setMaxAge(expires);
         cookie.setPath("/");
         if (secured) {
             cookie.setSecure(true);
         }
         LOG.info(cookieAsString(cookie));
         httpServletResponse.addCookie(cookie);
-        return loginId;
     }
 }

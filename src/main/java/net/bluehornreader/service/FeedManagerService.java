@@ -1,7 +1,7 @@
 package net.bluehornreader.service;
 
-import net.bluehornreader.*;
 import net.bluehornreader.data.*;
+import net.bluehornreader.misc.*;
 import net.bluehornreader.model.*;
 import org.apache.commons.logging.*;
 
@@ -29,8 +29,8 @@ public class FeedManagerService extends Service {
     private Election.DB electionDb;
     private Feed.DB feedDb;
     private Crawler.DB crawlerDb;
-    private HashMap<String, ArrayList<String>> feedMap = new HashMap<String, ArrayList<String>>();
-    private HashMap<String, Integer> crawlerSeq = new HashMap<String, Integer>();
+    private HashMap<String, ArrayList<String>> feedMap = new HashMap<>();
+    private HashMap<String, Integer> crawlerSeq = new HashMap<>();
     private long nexFeedDistribution;
     private LeaderElector leaderElector;
 
@@ -50,7 +50,7 @@ public class FeedManagerService extends Service {
 
     @Override
     protected Collection<Thread> getChildThreads() {
-        return new ArrayList<Thread>(); // there are no secondary threads for now (the leader election is joined, so it doesn't matter)
+        return new ArrayList<>(); // there are no secondary threads for now (the leader election is joined, so it doesn't matter)
     }
 
     /**
@@ -125,8 +125,8 @@ public class FeedManagerService extends Service {
         long begin = System.currentTimeMillis();
 
         ArrayList<Crawler> crawlers = crawlerDb.getAll();   // ttt1 reads all fields but doesn't need them
-        ArrayList<Crawler> liveCrawlers = new ArrayList<Crawler>();
-        ArrayList<Crawler> deadCrawlers = new ArrayList<Crawler>();
+        ArrayList<Crawler> liveCrawlers = new ArrayList<>();
+        ArrayList<Crawler> deadCrawlers = new ArrayList<>();
         for (Crawler crawler : crawlers) {
             if (checkAndStoreAlive(crawler)) {
                 liveCrawlers.add(crawler);
@@ -135,7 +135,7 @@ public class FeedManagerService extends Service {
             }
         }
 
-        HashMap<String, ArrayList<String>> newFeedMap = new HashMap<String, ArrayList<String>>();
+        HashMap<String, ArrayList<String>> newFeedMap = new HashMap<>();
         if (liveCrawlers.isEmpty()) {
             LOG.warn("No live crawlers found");
         } else {

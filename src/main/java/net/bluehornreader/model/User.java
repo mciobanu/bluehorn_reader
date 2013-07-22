@@ -2,8 +2,8 @@ package net.bluehornreader.model;
 
 import com.netflix.astyanax.connectionpool.*;
 import com.netflix.astyanax.model.*;
-import net.bluehornreader.*;
 import net.bluehornreader.data.*;
+import net.bluehornreader.misc.*;
 import org.apache.commons.logging.*;
 
 import java.security.*;
@@ -121,6 +121,7 @@ public class User {
         private LowLevelDbAccess lowLevelDbAccess;
 
         private static final String UPDATE_STATEMENT = CQL_TABLE.getUpdateStatement();
+        private static final String UPDATE_FEEDS_STATEMENT = CQL_TABLE.getUpdateStatement(Columns.USER_ID, Columns.FEED_IDS);
         private static final String SELECT_STATEMENT = CQL_TABLE.getSelectStatement();
         private static final String DELETE_STATEMENT = CQL_TABLE.getDeleteStatement();
 
@@ -128,18 +129,12 @@ public class User {
             this.lowLevelDbAccess = lowLevelDbAccess;
         }
 
+        public void add(User user) throws Exception {
+            add(Arrays.asList(user));
+        }
+
         public void add(Collection<User> users) throws Exception {
             for (User user : users) {
-                StringBuilder bld = new StringBuilder();
-                boolean first = true;
-                for (String feedId : user.feedIds) {
-                    if (first) {
-                        first = false;
-                    } else {
-                        bld.append(':');
-                    }
-                    bld.append(feedId);
-                }
                 OperationResult<CqlResult<Integer, String>> result;
                 result = lowLevelDbAccess.getMainKeyspace()
                         .prepareQuery(LowLevelDbAccess.RESULTS_CF)
@@ -150,7 +145,7 @@ public class User {
                         .withByteBufferValue(user.password, LowLevelDbAccess.BYTE_BUFFER_SERIALIZER)
                         .withStringValue(user.salt)
                         .withStringValue(user.email)
-                        .withStringValue(bld.toString())
+                        .withStringValue(Utils.listAsString(user.feedIds))
                         .withBooleanValue(user.active)
                         .withBooleanValue(user.admin)
                         .execute();
@@ -158,6 +153,21 @@ public class User {
             }
         }
 
+        //ttt1 search for all "add()" that are actually used to update some of the fields; or maybe better, allow columns to be specified for update() and
+        //   get(); the thing is this requires exposing guts (the actual DB column names) and maybe some reflection
+        public void updateFeeds(User user) throws Exception {
+            OperationResult<CqlResult<Integer, String>> result;
+            result = lowLevelDbAccess.getMainKeyspace()
+                    .prepareQuery(LowLevelDbAccess.RESULTS_CF)
+                    .withCql(UPDATE_FEEDS_STATEMENT)
+                    .asPreparedStatement()
+                    .withStringValue(user.userId)
+                    .withStringValue(Utils.listAsString(user.feedIds))
+                    .execute();
+            CqlTable.checkResult(result);
+        }
+
+        //ttt1 more get() functions to avoid retrieving and parsing useless data; so some fields might be left empty
         public User get(String userId) throws Exception {
             OperationResult<CqlResult<Integer, String>> result;
             result = lowLevelDbAccess.getMainKeyspace()
@@ -170,15 +180,13 @@ public class User {
 
             if (rows.size() == 1) {
                 ColumnList<String> columns = rows.getRowByIndex(0).getColumns();
-                String rawFeedIds = columns.getStringValue(Columns.FEED_IDS, "");
                 return new User(
                         userId,
                         columns.getStringValue(Columns.NAME, ""),
                         columns.getByteArrayValue(Columns.PASSWORD, null),
                         columns.getStringValue(Columns.SALT, ""),
                         columns.getStringValue(Columns.EMAIL, ""),
-                        rawFeedIds.isEmpty() ? new ArrayList<String>() : new ArrayList<>(Arrays.asList(rawFeedIds.split(":", 0))), //ttt2 more get() functions to avoid
-                                // retrieving and parsing useless data; so some fields might be left empty
+                        Utils.stringAsList(columns.getStringValue(Columns.FEED_IDS, "")),
                         columns.getBooleanValue(Columns.ACTIVE, false),
                         columns.getBooleanValue(Columns.ADMIN, false));
             }

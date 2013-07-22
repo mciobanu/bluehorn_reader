@@ -5,7 +5,6 @@ import org.apache.commons.logging.*;
 import org.eclipse.jetty.server.*;
 
 import javax.servlet.http.*;
-import java.util.*;
 
 /**
  * Created with IntelliJ IDEA.
@@ -26,39 +25,36 @@ public class UserHelpers {
         this.userDb = userDb;
     }
 
-    public static String getLoginId(Request request) {
+    public static LoginInfo.SessionInfo getSessionInfo(Request request) {
         Cookie[] cookies = request.getCookies();
-        String loginId = null;
+        LoginInfo.SessionInfo res = new LoginInfo.SessionInfo();
         String cookieRepr = "";
         if (cookies != null) {
             for (Cookie cookie : cookies) {
                 cookieRepr += WebUtils.cookieAsString(cookie);
-                if (cookie.getName().equals(ReaderHandler.LOGIN_ID)) {
-                    try {
-                        cookieRepr += " " + new Date(Long.parseLong(cookie.getValue())).toString();
-                        loginId = cookie.getValue();
-                    } catch (Exception e) {
-                        LOG.error("Exception parsing cookie", e);
-                    }
+                if (cookie.getName().equals(ReaderHandler.SESSION_ID)) {
+                    res.sessionId = cookie.getValue();
+                }
+                if (cookie.getName().equals(ReaderHandler.BROWSER_ID)) {
+                    res.browserId = cookie.getValue();
                 }
                 cookieRepr += "       ";
             }
         }
         LOG.info("cookies: " + cookieRepr);
-        return loginId;
+        return res;
     }
 
     /**
-     * @param loginId
-     * @return LoginInfo, if found; if not found or loginId is null, returns null
+     * @return LoginInfo, if found; if not found or sessionInfo has null fields, returns null
      *
      * @throws Exception only if the underlying DB throws; otherwise it returns null
      */
-    public LoginInfo getLoginInfo(String loginId) throws Exception {
-        if (loginId == null) {
+    private LoginInfo getLoginInfo(LoginInfo.SessionInfo sessionInfo) throws Exception {
+        if (sessionInfo.isNull()) {
             return null;
         }
-        return loginInfoDb.get(loginId);
+        return loginInfoDb.get(sessionInfo.browserId, sessionInfo.sessionId);
     }
 
     /**
@@ -67,10 +63,16 @@ public class UserHelpers {
      * @throws Exception only if the underlying DB throws; otherwise it returns null
      */
     public LoginInfo getLoginInfo(Request request) throws Exception {
-        return getLoginInfo(getLoginId(request));
+        LoginInfo.SessionInfo sessionInfo = getSessionInfo(request);
+        return getLoginInfo(sessionInfo);
     }
 
 
+    /**
+     * @param request
+     * @return null if user not found
+     * @throws Exception
+     */
     public User getUser(Request request) throws Exception {
         LoginInfo loginInfo = getLoginInfo(request);
         if (loginInfo == null) {

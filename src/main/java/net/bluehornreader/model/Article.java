@@ -3,11 +3,13 @@ package net.bluehornreader.model;
 import com.netflix.astyanax.connectionpool.*;
 import com.netflix.astyanax.model.*;
 import net.bluehornreader.data.*;
+import net.bluehornreader.misc.*;
 import org.apache.commons.logging.*;
 
+import java.text.*;
 import java.util.*;
 
-import static net.bluehornreader.data.CqlTable.ColumnInfo;
+import static net.bluehornreader.data.CqlTable.*;
 import static net.bluehornreader.data.CqlTable.ColumnType.*;
 
 /**
@@ -44,7 +46,7 @@ public class Article {
 
     public static CqlTable CQL_TABLE;
     static {
-        List<ColumnInfo> columnInfos = new ArrayList<ColumnInfo>();
+        List<ColumnInfo> columnInfos = new ArrayList<>();
         columnInfos.add(new ColumnInfo(Columns.FEED_ID_AND_SEQ, TEXT));
         columnInfos.add(new ColumnInfo(Columns.TITLE, TEXT));
         columnInfos.add(new ColumnInfo(Columns.SUMMARY, TEXT));
@@ -66,6 +68,7 @@ public class Article {
 
     @Override
     public String toString() {
+        SimpleDateFormat fmt = new SimpleDateFormat("EEE, d MMM yyyy HH:mm:ss zzz", Locale.US);
         return "Article{" +
                 "feedId='" + feedId + '\'' +
                 ", seq=" + seq +
@@ -73,7 +76,7 @@ public class Article {
                 ", summary='" + summary + '\'' +
                 ", url='" + url + '\'' +
                 ", content='" + content + '\'' +
-                ", publishTime=" + publishTime +
+                ", publishTime=" + publishTime + "(" + fmt.format(new Date(publishTime)) + ")" +
                 '}';
     }
 
@@ -201,7 +204,7 @@ public class Article {
     }
 
     private static String getKey(String feedId, int seq) {
-        return feedId + ":" + seq;
+        return feedId + Utils.LIST_SEPARATOR + seq;
     }
 
     private String getKey() {
