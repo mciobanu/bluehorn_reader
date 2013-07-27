@@ -1,7 +1,9 @@
 Bluehorn Reader
 ===============
 
-One purpose of this project is to provide an easy-to-use and easy-to-tweak server for its custom RSS reader. The server can be installed at home or on hundreds of computers supporting a bigger site.
+RSS Crawler + Storage + Web Server to add and see feeds.
+
+One purpose of this project is to provide an easy-to-use and easy-to-tweak web server for its custom RSS reader. The server can be installed at home or on hundreds of computers supporting a bigger site.
 
 A related purpose is to allow experimenting with various clients and graphical design ideas.
 
@@ -13,7 +15,7 @@ This is an early version, so a lot remains to be done. However, as it is, the pr
 
 Currently there is only a generic web client, but I plan to write a native Android client (not in the immediate future, though.)
 
-The user interface is basically a sketch. You can use it to browse feeds but it's quite basic and it lacks features. It got to the point where it's good enough for me.
+The user interface is basically a sketch. You can use it to browse feeds but it's quite basic and it lacks features. Nevertheless, it got to the point where it's good enough for me.
 
 This is my first contact with many of the technologies used here, so chances are there's plenty of room for improvement.
 
@@ -29,6 +31,6 @@ Requirements
 What's next
 -----------
 
-To some extent it depends on whether there is interest in using and maybe contributing to the project. The next things to do are to make running the thing easier, to fix a little the UI, and to add more comments in the code.
+To some extent it depends on whether there is interest in using and maybe contributing to the project. The next things to do are making UI improvements and addding more comments in the code.
 
 
