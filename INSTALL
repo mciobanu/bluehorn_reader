@@ -1,19 +1,43 @@
-Set up:
-
-You need Java 7, Cassandra 1.2.4 (something close would probably also work) and Maven. The plan is to have the build produce a single jar but we're not there yet. For now I just run everything from IntelliJ Idea. Importing the .pom file should be enough.
-
-You'd have to make some adjustments, e.g. to configure log4j or to set up a keystore for HTTP access. (These will be better documented in the future.)
+If you just want to see how it works, you can build a .jar and run it. The project also works just fine in IntelliJ IDEA (and I guess other IDEs as well, but some tweaks might be needed for Maven; I didn't try anything else besides IDEA.)
 
 
-There is a single executable, which can perform several roles, based on configuration (right now most of the configuration is actually hard-coded in a file, but that is going to change soon):
-- Web server
+Requirements
+============
+
+You need Java 7, Cassandra 1.2.4 (something close would probably also work) and Maven 3.x. My tests were on Linux. I didn't try it, but it should also work on Windows or Mac, perhaps after some adjustments.
+
+
+
+Build
+=====
+
+To create a .jar file, run this in the project's directory:
+
+mvn package
+
+The .jar will be in the "targets" directory, and it's called "bluehorn-reader-0.1.one-jar.jar" (or something similar, as the versions change)
+
+
+
+Cassandra
+=========
+
+Cassandra is pretty straightforward to install. The version that I got (1.2.4) required a few tweaks because of lack of permissions to write to some directories, but you'd prebably want to change those directories anyway to a place where there is more space than on the root partition. If Cassandra isn't on the local host or on the standard port, you'd have to change cassandraDbSeeds and related settings in config.properties. You don't have to create any tables. The program will do this when it starts. The schema will probably change in the future, though. There are no concrete plans to make the program upgrade the schema automatically as the version increases, but I'll probably do it in the future. Dropping a table was good enough thus far.
+
+
+
+Usage
+=====
+
+The program can perform several roles, based on configuration:
+- Web Server
 - Feed Crawler
-- Feed Manager - assigns feeds to crawlers, so that each feed has its own crawler
-By default the same process will act in all 3 roles. Bigger deployments would probably need to use specialized hosts for each role. For all the roles, multiple hosts can be allocated; if there are potential conflicts, they will come to an agreement on their own. There is no state on the web server, so many web servers can be put behind a load balancer and they should just work.
+- Feed Manager - assigns feeds to crawlers, so that each feed has exactly one crawler
 
+By default the same process will act in all 3 roles. Bigger deployments would probably need to use specialized hosts for each role. For all the roles, multiple hosts can be allocated; they can be told to have the same role, which is fine (they will come to an agreement on their own as to which one is the Feed Manager and what each one should crawl.) There is no state on the web server, so many web servers can be put behind a load balancer and they should just work.
 
+When running as a jar you only need to tell it where the configuration file (config.properties) is, but you should also specify the Log4J configuration as a JVM parameter (there is a log4j.properties in the project root, but you might want to adjust it.) The file config.properties will also need a little change from what it is shipped with if you want HTTPS support, as it needs a certificate. For home testing you can create a self-signed certificate: here is one page explaining how you can do it: http://www.sslshopper.com/article-how-to-create-a-self-signed-certificate-using-java-keytool.html . Also, you might want to change the ports from 8080 and 8443 to 80 and 443.
 
-When the process starts, it makes available a web server at the port 8080 for HTTP and 8443 for HTTPS. There is a default account named "admin" with the password "admin", which can be changed. (Note that the password is transmitted in clear over HTTP, so better use HTTPS.) Other accounts can be created. Feeds can be added and browsed, and that's about it.
+When running from an IDE, you might also have to tell it where the webapp directory is, containing .jsp files (it's in src/main/webapp)
 
-Although Cassandra needs to be running on the local host (or on other hosts, but then the config should reflect that), the program creates the database schema at startup, so that's not something you should worry about. The schema will change, though. There are no concrete plans to make the program upgrade the schema automatically as the version increases, but I'll do it in the future.
-
+When the program starts, it makes available a web server at the port 8080 for HTTP and 8443 for HTTPS (assuming you kept the default ports and configured HTTPS correctly.) There is a default account named "admin" with the password "admin", which can be changed in the "settings" page. (Note that the password is transmitted in clear over HTTP, so better use HTTPS.) Other accounts can be created. Feeds can be added and browsed, and that's about it. You need an RSS URL. Imports from Google Reader's saved data can probably be easily added if there's a demand, but I just added my feeds manually.

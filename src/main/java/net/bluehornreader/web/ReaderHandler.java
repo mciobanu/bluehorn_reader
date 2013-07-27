@@ -1,3 +1,25 @@
+/*
+Copyright (c) 2013 Marian Ciobanu
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+ */
+
 package net.bluehornreader.web;
 
 import net.bluehornreader.data.*;
@@ -69,6 +91,7 @@ public class ReaderHandler extends WebAppContext {
     public static final String PARAM_FEED_ID = "feedId";
     public static final String PARAM_ITEMS_PER_PAGE = "itemsPerPage";
     public static final String PARAM_STYLE = "style";
+    public static final String PARAM_FEED_DATE_FORMAT = "feedDateFormat";
 
     // variable names, used to give JSPs access to Java objects in the handler via request.getAttribute(()
     public static final String VAR_USER = "user";
@@ -89,6 +112,8 @@ public class ReaderHandler extends WebAppContext {
 
     private UserHelpers userHelpers;
 
+    private boolean isInJar = Utils.isInJar();
+
 
     private static class ReaderErrorHandler extends ErrorHandler {
         @Override  //!!! note that this gets called for missing pages, but not if exceptions are thrown; exceptions are handled separately
@@ -99,6 +124,19 @@ public class ReaderHandler extends WebAppContext {
         }
     }
 
+    private static HashMap<String, String> PATH_MAPPING = new HashMap<>();
+    static {
+        PATH_MAPPING.put("", "home_page");
+        PATH_MAPPING.put(PATH_LOGIN, "login");
+        PATH_MAPPING.put(PATH_LOGOUT, "login"); // !!! after logout we get redirected to /login
+        PATH_MAPPING.put(PATH_SIGNUP, "signup");
+        PATH_MAPPING.put(PATH_ERROR, "error");
+        PATH_MAPPING.put(PATH_FEED_ADMIN, "feed_admin");
+        PATH_MAPPING.put(PATH_SETTINGS, "settings");
+        PATH_MAPPING.put(PATH_FEEDS, "feeds");
+        PATH_MAPPING.put(PATH_FEED + "/*", "feed");
+        PATH_MAPPING.put(PATH_ADMIN, "admin");
+    }
 
     public ReaderHandler(LowLevelDbAccess lowLevelDbAccess, String webDir) {
 
@@ -114,31 +152,37 @@ public class ReaderHandler extends WebAppContext {
         File warPath = new File(webDir);
         setWar(warPath.getAbsolutePath());
 
-        //addServlet(new ServletHolder(new RedirectServlet("/home_page.jsp")), "/*"); //ttt2 see why this recurse infinitely
-        //addServlet(new ServletHolder(new RedirectServlet("/aabb.jsp")), "/aabb/*");
-
-        addServlet(new ServletHolder(new RedirectServlet("/home_page.jsp")), "");
-
-        addServlet(new ServletHolder(new RedirectServlet("/login.jsp")), PATH_LOGIN);
-        addServlet(new ServletHolder(new RedirectServlet("/login.jsp")), PATH_LOGOUT); // !!! after logout we get redirected to /login
-        addServlet(new ServletHolder(new RedirectServlet("/signup.jsp")), PATH_SIGNUP);
-        addServlet(new ServletHolder(new RedirectServlet("/error.jsp")), PATH_ERROR);
-        addServlet(new ServletHolder(new RedirectServlet("/feed_admin.jsp")), PATH_FEED_ADMIN);
-
-        addServlet(new ServletHolder(new RedirectServlet("/settings.jsp")), PATH_SETTINGS);
-        addServlet(new ServletHolder(new RedirectServlet("/feeds.jsp")), PATH_FEEDS);
-        addServlet(new ServletHolder(new RedirectServlet("/feed.jsp")), PATH_FEED + "/*");
-
-        addServlet(new ServletHolder(new RedirectServlet("/admin.jsp")), PATH_ADMIN);
-
+        if (isInJar) {
+            for (Map.Entry<String, String> entry : PATH_MAPPING.entrySet()) {
+                addPrebuiltJsp(entry.getKey(), "jsp." + entry.getValue().replaceAll("_", "_005f") + "_jsp");
+            }
+        } else {
+            for (Map.Entry<String, String> entry : PATH_MAPPING.entrySet()) {
+                addServlet(new ServletHolder(new RedirectServlet("/" + entry.getValue() + ".jsp")), entry.getKey());
+            }
+        }
 
         setErrorHandler(new ReaderErrorHandler());
+    }
+
+
+    private void addPrebuiltJsp(String path, String className) {
+        try {
+            Class clazz = Class.forName(className);    //ttt2 see if possible to not use this, preferably without doing redirections like RedirectServlet
+            Object obj = clazz.newInstance();
+            addServlet(new ServletHolder((Servlet)obj), path);
+            LOG.info("Added prebuilt JSP: " + obj.toString());
+        } catch (Exception e) {
+            LOG.fatal(String.format("Failed to load prebuilt JSP for %s and %s", path, className), e);
+        }
     }
 
 
     @Override
     public void doHandle(String target, Request request, HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse)
             throws IOException, ServletException {
+
+        LOG.info("handling " + target);
 
         //!!! doHandle() is called twice for a request when using redirectiion, first time with request.getPathInfo()
         // set to the URI and target set to the path, then with request.getPathInfo() set to null and target set to the .jsp
@@ -157,8 +201,9 @@ public class ReaderHandler extends WebAppContext {
 
 
             if (request.getMethod().equals("GET")) {
-                if (target.endsWith(".jsp")) {
-                    // !!! no need to do anything about params if it's not a .jsp, as this will get called again for the corresponding .jsp
+                if (isInJar || target.endsWith(".jsp")) {
+                    // !!! when not in jar there's no need to do anything about params if it's not a .jsp,
+                    // as this will get called again for the corresponding .jsp
                     if (prepareForJspGet(target, request, httpServletResponse, secured)) {
                         return;
                     }
@@ -168,6 +213,7 @@ public class ReaderHandler extends WebAppContext {
                     return;
                 }
                 super.doHandle(target, request, httpServletRequest, httpServletResponse);
+                LOG.info("handling of " + target + " went to super");
 
                 //httpServletResponse.setDateHeader("Date", System.currentTimeMillis());     //ttt2 review these, probably not use
                 //httpServletResponse.setDateHeader("Expires", System.currentTimeMillis() + 60000);
@@ -304,7 +350,8 @@ public class ReaderHandler extends WebAppContext {
                 readArticlesColl.markRead(seq, Config.getConfig().maxSizeForReadArticles);
                 readArticlesCollDb.add(readArticlesColl);
             }
-            httpServletResponse.sendRedirect(article.url);
+            String s = URIUtil.encodePath(article.url).replace("%3F", "?").replace("%23", "#"); //ttt2 see how to do this right
+            httpServletResponse.sendRedirect(s);
         } catch (Exception e) {
             WebUtils.showResult(String.format("Failed to get article for path %s. %s", target, e), "/", request, httpServletResponse);
         }
@@ -411,6 +458,7 @@ public class ReaderHandler extends WebAppContext {
             return;
         }
         loginInfo.style = request.getParameter(PARAM_STYLE);
+        loginInfo.feedDateFormat = request.getParameter(PARAM_FEED_DATE_FORMAT); //ttt2 validate, better in JSP
 
         loginInfoDb.add(loginInfo);
 
@@ -542,7 +590,7 @@ public class ReaderHandler extends WebAppContext {
             sessionInfo.sessionId = getRandomId();
             Config config = Config.getConfig();
             loginInfoDb.add(new LoginInfo(sessionInfo.browserId, sessionInfo.sessionId, userId, expireOn, rememberAccount,
-                    config.defaultStyle, config.defaultItemsPerPage));
+                    config.defaultStyle, config.defaultItemsPerPage, config.defaultFeedDateFormat));
             LOG.info(String.format("Logging in in a new session. User: %s", user));
         } else {
             loginInfoDb.updateExpireTime(sessionInfo.browserId, sessionInfo.sessionId, expireOn);
@@ -599,7 +647,7 @@ public class ReaderHandler extends WebAppContext {
         }
     }
 
-    //!!! Idea reports this as unused, but it is called from JSP
+    //!!! IDEA reports this as unused, but it is called from JSP
     public static FeedInfo getFeedInfo(String feedPath) {
         if (feedPath.startsWith(PATH_FEED + "/")) {
             try {
@@ -620,7 +668,7 @@ public class ReaderHandler extends WebAppContext {
     }
 
 
-    //!!! Idea reports this as unused, but it is called from JSP
+    //!!! IDEA reports this as unused, but it is called from JSP
     public static String getStyle(LoginInfo loginInfo) {
         StringBuilder bld = new StringBuilder();
         bld.append("<style media=\"screen\" type=\"text/css\">\n\n");
@@ -683,13 +731,11 @@ ttt1 see about compiling the JSPs
 
 ttt0 see if possible to disable back button after logout
 
-ttt2 see if possible to mark links as "expiring"
-
 ttt0 encoding seems to be ISO-8859-1 when viewing page info in FF`
 
-ttt0 startup script
+ttt1 save summary and render it with truncated text
 
-ttt0 one jar ?
+ttt1 see if params are needed in html tag in JSP
 
  */
 

@@ -1,3 +1,25 @@
+/*
+Copyright (c) 2013 Marian Ciobanu
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+ */
+
 package net.bluehornreader.service;
 
 import net.bluehornreader.data.*;
@@ -7,6 +29,7 @@ import org.apache.commons.logging.*;
 import org.eclipse.jetty.server.*;
 import org.eclipse.jetty.util.ssl.*;
 
+import java.io.*;
 import java.util.*;
 
 
@@ -59,27 +82,29 @@ public class WebServerService extends Service {
             http.setPort(httpPort);
             http.setIdleTimeout(Config.getConfig().httpIdleTimeout);
 
-            Connector[] connectors;
+            Connector[] connectors = new Connector[]{ http };
 
             String httpsKeystore = Config.getConfig().httpsKeystore;
             String httpsKeystorePassword = Config.getConfig().httpsKeystorePassword;
             if (httpsKeystore != null && httpsKeystorePassword != null) {
-                SslContextFactory sslContextFactory = new SslContextFactory();
-                sslContextFactory.setKeyStorePath(httpsKeystore);
-                sslContextFactory.setKeyStorePassword(httpsKeystorePassword);
+                if (new File(httpsKeystore).isFile()) {
+                    SslContextFactory sslContextFactory = new SslContextFactory();
+                    sslContextFactory.setKeyStorePath(httpsKeystore);
+                    sslContextFactory.setKeyStorePassword(httpsKeystorePassword);
 
-                HttpConfiguration httpsConfiguration = new HttpConfiguration(httpConfiguration);
-                httpsConfiguration.addCustomizer(new SecureRequestCustomizer());
+                    HttpConfiguration httpsConfiguration = new HttpConfiguration(httpConfiguration);
+                    httpsConfiguration.addCustomizer(new SecureRequestCustomizer());
 
-                ServerConnector https = new ServerConnector(jettyServer,
-                        new SslConnectionFactory(sslContextFactory, "http/1.1"),
-                        new HttpConnectionFactory(httpsConfiguration));
-                https.setPort(httpsPort);
-                https.setIdleTimeout(Config.getConfig().httpsIdleTimeout);
+                    ServerConnector https = new ServerConnector(jettyServer,
+                            new SslConnectionFactory(sslContextFactory, "http/1.1"),
+                            new HttpConnectionFactory(httpsConfiguration));
+                    https.setPort(httpsPort);
+                    https.setIdleTimeout(Config.getConfig().httpsIdleTimeout);
 
-                connectors = new Connector[]{ http, https };
-            } else {
-                connectors = new Connector[]{ http };
+                    connectors = new Connector[]{ http, https };
+                } else {
+                    LOG.error("Keystore " + httpsKeystore + " not found. Will not start HTTPS server.");
+                }
             }
 
             jettyServer.setConnectors(connectors);

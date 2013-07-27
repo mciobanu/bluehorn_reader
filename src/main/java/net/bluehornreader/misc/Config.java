@@ -1,3 +1,25 @@
+/*
+Copyright (c) 2013 Marian Ciobanu
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+ */
+
 package net.bluehornreader.misc;
 
 import com.netflix.astyanax.model.*;
@@ -34,9 +56,9 @@ public class Config {
     public boolean startFeedCrawler = true;
     public boolean startFeedManager = true;
 
-    public int maxConnPerHost = 100;
-    public String dbSeeds = "127.0.0.1:9160";
-    public int dbPort = 9160;
+    public int cassandraMaxConnPerHost = 100;
+    public String cassandraDbSeeds = "127.0.0.1:9160";
+    public int cassandraDbPort = 9160;
 
     public String cqlVersion = "3.0.0";
     public String targetCassandraVersion = "1.2";
@@ -81,8 +103,7 @@ public class Config {
     //public long feedManagerTickInterval = Utils.stringToDuration("1m");
     public long feedManagerTickInterval = Utils.stringToDuration("2s");
 
-    public String defaultStyle = ".WarnCol { background: #ff1818; color: #ffff00; font-weight: bold; }\n" +
-            "\n" +
+    public String defaultStyle =
             "#header {\n" +
             "    position:fixed;\n" +
             "    left:0px;\n" +
@@ -111,24 +132,17 @@ public class Config {
             "\n" +
             "a:link     { color: #ffffc0; text-decoration: none; }\n" +
             "a:visited  { color: #dddd80; text-decoration: none; }\n" +
-            "a:hover    { color: #ffffd0; text-decoration: none; }\n" +
-            "a:active   { color: #ffffb0; text-decoration: none; }\n" +
-            "\n" +
-            "#column1 {\n" +
-            "    float:left;\n" +
-            "    width: 33%;\n" +
+            "a:hover    { color: #dddd80; text-decoration: none; }\n" +
+            "a:active   { color: #dddd80; text-decoration: none; }\n" +
             "}\n" +
             "\n" +
-            "#column2 {\n" +
-            "    float:left;\n" +
-            "    width: 33%;\n" +
-            "}\n" +
-            "\n" +
-            "#column3 {\n" +
-            "    float:left;\n" +
-            "    width: 33%;\n" +
+            "a.visitedLink:link     { color: #dddd80; text-decoration: none; }\n" +
+            "a.visitedLink:visited  { color: #dddd80; text-decoration: none; }\n" +
+            "a.visitedLink:hover    { color: #dddd80; text-decoration: none; }\n" +
+            "a.visitedLink:active   { color: #dddd80; text-decoration: none; }\n" +
             "}\n";
     public int defaultItemsPerPage = 50;
+    public String defaultFeedDateFormat = "MM/dd HH:mm";
 
     public int maxSizeForReadArticles = 80;
 
@@ -152,9 +166,9 @@ public class Config {
             startFeedCrawler = getBoolean("startFeedCrawler", startFeedCrawler);
             startFeedManager = getBoolean("startFeedManager", startFeedManager);
 
-            maxConnPerHost = getInt("maxConnPerHost", maxConnPerHost);
-            dbSeeds = getString("dbSeeds", dbSeeds);
-            dbPort = getInt("dbPort", dbPort);
+            cassandraMaxConnPerHost = getInt("cassandraMaxConnPerHost", cassandraMaxConnPerHost);
+            cassandraDbSeeds = getString("cassandraDbSeeds", cassandraDbSeeds);
+            cassandraDbPort = getInt("cassandraDbPort", cassandraDbPort);
 
             cqlVersion = getString("cqlVersion", cqlVersion);
             targetCassandraVersion = getString("targetCassandraVersion", targetCassandraVersion);
@@ -188,9 +202,13 @@ public class Config {
             feedManagerTickInterval = getDuration("feedManagerTickInterval", feedManagerTickInterval);
 
             defaultStyle = getString("defaultStyle", defaultStyle);
-            //defaultStyle = defaultStyle.replaceAll("       +", ""); //ttt2 try to keep indentation; leading spaces are discarded when reading the file,
-                // so they don't get here
+            //defaultStyle = defaultStyle.replaceAll("       +", "");
+            defaultStyle = defaultStyle.replaceAll("      +", ""); //ttt1 see how to do this right (so the leading spaces are kept and the leading ones
+                // are discarded )
+
             defaultItemsPerPage = getInt("defaultItemsPerPage", defaultItemsPerPage);
+
+            defaultFeedDateFormat = getString("defaultFeedDateFormat", defaultFeedDateFormat);
 
             maxSizeForReadArticles = getInt("maxSizeForReadArticles", maxSizeForReadArticles);
         } catch (IOException e) {

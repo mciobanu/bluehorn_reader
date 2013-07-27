@@ -1,3 +1,25 @@
+/*
+Copyright (c) 2013 Marian Ciobanu
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+ */
+
 package net.bluehornreader.model;
 
 import com.netflix.astyanax.connectionpool.*;
@@ -31,6 +53,7 @@ public class LoginInfo {
     public boolean rememberAccount;
     public String style;
     public int itemsPerPage;
+    public String feedDateFormat;
 
 
     public static class SessionInfo {
@@ -50,6 +73,7 @@ public class LoginInfo {
         private static final String REMEMBER_ACCOUNT = "remember_account";
         private static final String STYLE = "style";
         private static final String ITEMS_PER_PAGE = "items_per_page";
+        private static final String FEED_DATE_FORMAT = "feed_date_format";
     }
 
     public static CqlTable CQL_TABLE;
@@ -62,11 +86,13 @@ public class LoginInfo {
         columnInfos.add(new CqlTable.ColumnInfo(Columns.REMEMBER_ACCOUNT, BOOLEAN));
         columnInfos.add(new CqlTable.ColumnInfo(Columns.STYLE, TEXT));
         columnInfos.add(new CqlTable.ColumnInfo(Columns.ITEMS_PER_PAGE, INT));
+        columnInfos.add(new CqlTable.ColumnInfo(Columns.FEED_DATE_FORMAT, TEXT));
         CqlTable.IndexInfo indexInfo = new CqlTable.IndexInfo(Columns.BROWSER_ID);
         CQL_TABLE = new CqlTable("login_infos", columnInfos, indexInfo);
     }
 
-    public LoginInfo(String browserId, String sessionId, String userId, long expiresOn, boolean rememberAccount, String style, int itemsPerPage) {
+    public LoginInfo(String browserId, String sessionId, String userId, long expiresOn, boolean rememberAccount, String style, int itemsPerPage,
+                     String feedDateFormat) {
         this.browserId = browserId;
         this.sessionId = sessionId;
         this.userId = userId;
@@ -74,6 +100,7 @@ public class LoginInfo {
         this.rememberAccount = rememberAccount;
         this.style = style;
         this.itemsPerPage = itemsPerPage;
+        this.feedDateFormat = feedDateFormat;
     }
 
 
@@ -87,6 +114,7 @@ public class LoginInfo {
                 ", rememberAccount=" + rememberAccount +
                 ", style=" + style.replaceAll("\n", " ") +
                 ", itemsPerPage=" + itemsPerPage +
+                ", feedDateFormat=" + feedDateFormat +
                 '}';
     }
 
@@ -117,6 +145,7 @@ public class LoginInfo {
                     .withBooleanValue(loginInfo.rememberAccount)
                     .withStringValue(loginInfo.style)
                     .withIntegerValue(loginInfo.itemsPerPage)
+                    .withStringValue(loginInfo.feedDateFormat)
                     .execute();
             CqlTable.checkResult(result);
         }
@@ -152,7 +181,8 @@ public class LoginInfo {
                         columns.getLongValue(Columns.EXPIRES_ON, 0L),
                         columns.getBooleanValue(Columns.REMEMBER_ACCOUNT, false),
                         columns.getStringValue(Columns.STYLE, ""),
-                        columns.getIntegerValue(Columns.ITEMS_PER_PAGE, 0));
+                        columns.getIntegerValue(Columns.ITEMS_PER_PAGE, 0),
+                        columns.getStringValue(Columns.FEED_DATE_FORMAT, ""));
             }
 
             if (rows.size() > 1) {
@@ -184,7 +214,8 @@ public class LoginInfo {
                         columns.getLongValue(Columns.EXPIRES_ON, 0L),
                         columns.getBooleanValue(Columns.REMEMBER_ACCOUNT, false),
                         columns.getStringValue(Columns.STYLE, ""),
-                        columns.getIntegerValue(Columns.ITEMS_PER_PAGE, 0)));
+                        columns.getIntegerValue(Columns.ITEMS_PER_PAGE, 0),
+                        columns.getStringValue(Columns.FEED_DATE_FORMAT, "")));
             }
 
             return res;
