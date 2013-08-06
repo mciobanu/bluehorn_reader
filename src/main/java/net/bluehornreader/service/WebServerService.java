@@ -26,7 +26,9 @@ import net.bluehornreader.data.*;
 import net.bluehornreader.misc.*;
 import net.bluehornreader.web.*;
 import org.apache.commons.logging.*;
+import org.eclipse.jetty.security.*;
 import org.eclipse.jetty.server.*;
+import org.eclipse.jetty.util.security.*;
 import org.eclipse.jetty.util.ssl.*;
 
 import java.io.*;
@@ -82,7 +84,7 @@ public class WebServerService extends Service {
             http.setPort(httpPort);
             http.setIdleTimeout(Config.getConfig().httpIdleTimeout);
 
-            Connector[] connectors = new Connector[]{ http };
+            jettyServer.addConnector(http);
 
             String httpsKeystore = Config.getConfig().httpsKeystore;
             String httpsKeystorePassword = Config.getConfig().httpsKeystorePassword;
@@ -101,13 +103,11 @@ public class WebServerService extends Service {
                     https.setPort(httpsPort);
                     https.setIdleTimeout(Config.getConfig().httpsIdleTimeout);
 
-                    connectors = new Connector[]{ http, https };
+                    jettyServer.addConnector(https);
                 } else {
                     LOG.error("Keystore " + httpsKeystore + " not found. Will not start HTTPS server.");
                 }
             }
-
-            jettyServer.setConnectors(connectors);
 
             setupReaderHandler(jettyServer, lowLevelDbAccess);
             //server.setStopAtShutdown(true);
@@ -138,21 +138,20 @@ public class WebServerService extends Service {
 
     private void setupReaderHandler(Server server, LowLevelDbAccess lowLevelDbAccess) {
         ReaderHandler readerHandler = new ReaderHandler(lowLevelDbAccess, webDir);
+
+        if (server.getConnectors().length > 1) { // there is an HTTPS connector, and in this case we redirect HTTP to HTTPS
+            Constraint constraint = new Constraint();
+            constraint.setDataConstraint(Constraint.DC_CONFIDENTIAL);
+
+            ConstraintMapping constraintMapping = new ConstraintMapping();
+            constraintMapping.setConstraint(constraint);
+            constraintMapping.setPathSpec("/*");
+
+            ConstraintSecurityHandler constraintSecurityHandler = new ConstraintSecurityHandler();
+            constraintSecurityHandler.addConstraintMapping(constraintMapping);
+            readerHandler.setSecurityHandler(constraintSecurityHandler);
+        }
+
         server.setHandler(readerHandler);
     }
-
-
 }
-
-
-/*
-
-http://wiki.eclipse.org/Jetty/Feature/Jetty_Maven_Plugin
-
-The Jetty Maven plugin is useful for rapid development and testing. You can add it to any webapp project that is structured
-according to the usual Maven defaults. The plugin can then periodically scan your project for changes and automatically
-redeploy the webapp if any are found. This makes the development cycle more productive by eliminating the build and deploy
-steps: you use your IDE to make changes to the project, and the running web container automatically picks them up, allowing
-you to test them straight away.
-
-*/
