@@ -6,7 +6,7 @@
 
     <groupId>net.bluehornreader</groupId>
     <artifactId>bluehorn-reader</artifactId>
-    <version>0.1</version>
+    <version>0.1.1</version>
 
 
     <!-- Adapt this to a version found on
